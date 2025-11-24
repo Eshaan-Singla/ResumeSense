@@ -1,408 +1,270 @@
-# ResumeSense - AI-Powered Resume Feedback Engine
+# ResumeSense · AI Resume Intelligence Suite
 
-ResumeSense is a comprehensive web application that analyzes resumes using AI and machine learning to provide actionable feedback. It helps job seekers optimize their resumes for ATS (Applicant Tracking Systems) and improve their chances of landing interviews.
-
-## 🚀 Features
-
-- **PDF Resume Parsing**: Extract and parse text from PDF resumes using PyMuPDF
-- **JD-Resume Matching**: Compute match scores between resumes and job descriptions
-- **ATS Compliance Checking**: Identify ATS issues and provide recommendations
-- **Power Verb Suggestions**: Find weak verbs and suggest stronger alternatives
-- **ML Quality Scoring**: Machine learning-based resume quality scoring (0-100)
-- **Analysis History**: Store and view past resume analyses
-- **Modern Web UI**: Clean, responsive interface built with vanilla HTML/CSS/JS
-
-## 📁 Project Structure
-
-```
-resumesense/
-├── backend/
-│   ├── api/                 # Flask API endpoints
-│   │   ├── __init__.py
-│   │   └── routes.py        # API route handlers
-│   ├── ml/                  # ML model scripts
-│   │   ├── __init__.py
-│   │   ├── feature_extractor.py  # Feature extraction for ML
-│   │   ├── resume_scorer.py      # Resume quality scorer
-│   │   └── train_model.py        # Model training script
-│   ├── nlp/                 # NLP processing modules
-│   │   ├── __init__.py
-│   │   ├── pdf_parser.py         # PDF text extraction
-│   │   ├── jd_matcher.py         # JD-Resume matching
-│   │   ├── ats_checker.py        # ATS compliance checker
-│   │   └── power_verbs.py        # Power verb suggestions
-│   ├── db/                  # Database models and connection
-│   │   ├── __init__.py
-│   │   └── database.py           # MySQL database operations
-│   ├── tests/               # Unit tests
-│   │   ├── __init__.py
-│   │   ├── test_pdf_parser.py
-│   │   ├── test_jd_matcher.py
-│   │   ├── test_ats_checker.py
-│   │   └── test_power_verbs.py
-│   ├── __init__.py
-│   └── config.py            # Configuration settings
-├── frontend/
-│   ├── static/              # Static assets
-│   │   ├── css/
-│   │   │   └── style.css
-│   │   └── js/
-│   │       ├── main.js
-│   │       └── history.js
-│   └── templates/           # HTML templates
-│       ├── index.html
-│       └── history.html
-├── data/
-│   ├── resumes/             # Sample resumes
-│   └── jds/                 # Sample job descriptions
-├── run.py                   # Application entry point
-├── requirements.txt         # Python dependencies
-└── README.md               # This file
-```
-
-## 🛠️ Setup Instructions
-
-### Prerequisites
-
-- Python 3.8 or higher
-- MySQL 5.7 or higher (or MariaDB)
-- pip (Python package manager)
-
-### Step 1: Clone and Navigate
-
-```bash
-cd ResumeSense
-```
-
-### Step 2: Create Virtual Environment
-
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### Step 3: Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4: Set Up MySQL Database
-
-1. Start MySQL server:
-```bash
-# On macOS with Homebrew
-brew services start mysql
-
-# On Linux
-sudo systemctl start mysql
-
-# On Windows, start MySQL service from Services
-```
-
-2. Create database (optional - will be created automatically if user has permissions):
-```sql
-CREATE DATABASE resumesense;
-```
-
-### Step 5: Configure Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Flask Configuration
-SECRET_KEY=your-secret-key-here-change-in-production
-
-# MySQL Database Configuration
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=your-mysql-password
-MYSQL_DATABASE=resumesense
-
-# File Upload Configuration
-UPLOAD_FOLDER=data/resumes
-
-# ML Model Configuration
-ML_MODEL_PATH=backend/ml/resume_quality_model.pkl
-```
-
-### Step 6: Train ML Model (Optional)
-
-The application will use a rule-based scorer if the model doesn't exist. To train the model:
-
-```bash
-python backend/ml/train_model.py
-```
-
-This will create `backend/ml/resume_quality_model.pkl`.
-
-### Step 7: Run the Application
-
-```bash
-python run.py
-```
-
-The application will be available at `http://localhost:5000`
-
-## 📖 API Documentation
-
-### POST /api/analyze
-
-Analyze a resume against a job description.
-
-**Request:**
-- Method: POST
-- Content-Type: multipart/form-data
-- Parameters:
-  - `resume_file` (file, optional): PDF file of resume
-  - `resume_text` (text, optional): Plain text resume (if no file uploaded)
-  - `job_description` (text, optional): Job description text
-
-**Response:**
-```json
-{
-  "match_score": 85.5,
-  "ats_score": 92.3,
-  "quality_score": 88.7,
-  "match_details": {
-    "common_keywords": ["Python", "JavaScript", "Flask"],
-    "missing_keywords": ["Docker", "Kubernetes"],
-    "important_keywords_matched": 8,
-    "important_keywords_total": 10
-  },
-  "ats_report": {
-    "issues": [],
-    "recommendations": ["Use bullet points", "Include phone number"],
-    "section_checks": {
-      "education": true,
-      "experience": true,
-      "skills": true
-    }
-  },
-  "power_verbs": {
-    "findings": [
-      {
-        "weak_verb": "did",
-        "suggestions": ["executed", "implemented", "accomplished"],
-        "context": "..."
-      }
-    ],
-    "stats": {
-      "weak_verb_count": 3,
-      "strong_verb_count": 15,
-      "power_verb_score": 83.3
-    }
-  },
-  "analysis_id": 1,
-  "resume_id": 1,
-  "job_id": 1
-}
-```
-
-### GET /api/history
-
-Get analysis history.
-
-**Query Parameters:**
-- `limit` (int, optional): Maximum number of results (default: 20)
-
-**Response:**
-```json
-[
-  {
-    "id": 1,
-    "resume_id": 1,
-    "job_id": 1,
-    "match_score": 85.5,
-    "ats_score": 92.3,
-    "quality_score": 88.7,
-    "created_at": "2024-01-15T10:30:00",
-    "resume_preview": "...",
-    "jd_preview": "..."
-  }
-]
-```
-
-### GET /api/resume/<id>
-
-Get resume by ID.
-
-**Response:**
-```json
-{
-  "id": 1,
-  "resume_text": "...",
-  "created_at": "2024-01-15T10:30:00",
-  "updated_at": "2024-01-15T10:30:00"
-}
-```
-
-### GET /api/analysis/<id>
-
-Get analysis result by ID.
-
-**Response:**
-```json
-{
-  "id": 1,
-  "resume_id": 1,
-  "job_id": 1,
-  "match_score": 85.5,
-  "ats_score": 92.3,
-  "quality_score": 88.7,
-  "ats_flags": {...},
-  "power_verb_suggestions": {...},
-  "match_details": {...},
-  "created_at": "2024-01-15T10:30:00",
-  "resume_text": "...",
-  "job_description": "..."
-}
-```
-
-## 🧪 Testing
-
-Run unit tests:
-
-```bash
-python -m pytest backend/tests/
-```
-
-Or run specific test file:
-
-```bash
-python -m pytest backend/tests/test_pdf_parser.py
-```
-
-## 🔧 Development
-
-### Git Workflow (2-Member Team)
-
-1. **Main Branch**: Production-ready code
-2. **Dev Branch**: Development integration
-3. **Feature Branches**: Individual features
-
-```bash
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Make changes and commit
-git add .
-git commit -m "Description of changes"
-
-# Push to remote
-git push origin feature/your-feature-name
-
-# Create pull request to dev branch
-# After review, merge to dev, then to main
-```
-
-### Code Structure Guidelines
-
-- **Backend**: Follow PEP 8 style guide
-- **Frontend**: Use semantic HTML, modern CSS, vanilla JavaScript
-- **Database**: Use ORM methods in `backend/db/database.py`
-- **Tests**: Write tests for all new features
-
-## 🚀 Deployment
-
-### Local Deployment
-
-Follow setup instructions above.
-
-### Cloud Deployment (Example: Heroku)
-
-1. Install Heroku CLI
-2. Create `Procfile`:
-```
-web: gunicorn run:app
-```
-3. Set environment variables in Heroku dashboard
-4. Deploy:
-```bash
-git push heroku main
-```
-
-### Environment Variables for Production
-
-- Set `SECRET_KEY` to a strong random value
-- Configure production MySQL database
-- Set `FLASK_ENV=production`
-- Use production WSGI server (gunicorn, uWSGI)
-
-## 📝 Features Explained
-
-### 1. PDF Parsing
-- Uses PyMuPDF (fitz) to extract text from PDF files
-- Cleans and normalizes extracted text
-- Handles multi-page resumes
-
-### 2. JD Matching
-- Tokenizes and extracts keywords from both texts
-- Computes keyword overlap score
-- Identifies important keywords from JD
-- Provides missing keywords list
-
-### 3. ATS Compliance
-- Checks for required sections (Education, Experience, Skills)
-- Validates contact information (email, phone)
-- Flags problematic formatting (tables, excessive special chars)
-- Provides actionable recommendations
-
-### 4. Power Verb Suggestions
-- Maintains dictionary of weak → strong verb mappings
-- Finds weak verbs in resume text
-- Provides context-aware suggestions
-- Calculates power verb score
-
-### 5. ML Quality Scoring
-- Extracts 22 features from resume
-- Uses Random Forest Regressor (or rule-based fallback)
-- Scores resume quality (0-100)
-- Considers ATS compliance, keywords, metrics, etc.
-
-
-## 🐛 Troubleshooting
-
-### Database Connection Issues
-- Verify MySQL is running: `mysql -u root -p`
-- Check `.env` file has correct credentials
-- Ensure database exists or user has CREATE DATABASE permission
-
-### PDF Parsing Errors
-- Ensure PDF contains readable text (not just images)
-- Check file size is within limits
-- Verify PyMuPDF is installed correctly
-
-### Model Not Found
-- Application will use rule-based scoring as fallback
-- Train model: `python backend/ml/train_model.py`
-- Check `ML_MODEL_PATH` in `.env`
-
-### Import Errors
-- Ensure virtual environment is activated
-- Verify all dependencies are installed: `pip install -r requirements.txt`
-- Check Python path includes project root
-
-## 📞 Support
-
-For issues or questions, please check:
-1. This README
-2. Code comments in source files
-3. Test files for usage examples
-
-## 🎯 Future Enhancements
-
-- [ ] Support for DOCX resume files
-- [ ] Advanced ML models (neural networks)
-- [ ] Resume templates and builder
-- [ ] Export analysis as PDF report
-- [ ] Multi-language support
-- [ ] Real-time collaboration features
-- [ ] Integration with job boards
+ResumeSense is an end‑to‑end resume intelligence platform that ingests PDF resumes, compares them against job descriptions, and returns targeted recommendations in seconds. Under the hood it combines NLP pipelines, ML scoring, ATS heuristics, and a modern web front end so job seekers (or career coaches) can iterate quickly with data they trust.
 
 ---
 
-**Built with ❤️ for job seekers everywhere**
+## Table of Contents
+
+1. [Core Capabilities](#core-capabilities)  
+2. [System Architecture](#system-architecture)  
+3. [Quick Start](#quick-start)  
+4. [.env Configuration](#env-configuration)  
+5. [Daily Developer Workflow](#daily-developer-workflow)  
+6. [Feature Deep Dive](#feature-deep-dive)  
+7. [REST API Reference](#rest-api-reference)  
+8. [Frontend Experience](#frontend-experience)  
+9. [Testing & Quality](#testing--quality)  
+10. [Troubleshooting Playbook](#troubleshooting-playbook)  
+11. [Deployment Notes](#deployment-notes)  
+12. [Roadmap & Contributions](#roadmap--contributions)
+
+---
+
+## Core Capabilities
+
+- **Resume ingestion & cleaning** – PyMuPDF extracts raw text, custom cleaners normalize bullets, headers, and spacing.
+- **JD ↔ Resume matching** – Semantic keyword engine weighs scientific/technical phrases heavier than filler language, returning match %, top overlaps, and gaps.
+- **ATS compliance auditor** – Section detection, contact validation, formatting heuristics, and prescriptive recommendations.
+- **Action verb diagnostics** – Finds weak verbs in context and proposes stronger alternatives alongside usage stats.
+- **ML quality scoring** – Feature extractor (22 engineered signals) feeds a Random Forest model with rule‑based fallback.
+- **Projects & achievements intelligence** – Dedicated parser surfaces technical projects (with tech stack) and co‑curricular achievements directly in the UI.
+- **Analysis history** – Every run persists to MySQL for later review, comparison, or API retrieval.
+
+---
+
+## System Architecture
+
+```
+┌───────────────┐      ┌────────────────┐      ┌───────────────────────┐
+│  Frontend     │ ---> │ Flask REST API │ ---> │ NLP/ML Pipelines       │
+│ (HTML/CSS/JS) │      │ /api/*         │      │ • PDF parser (PyMuPDF) │
+│               │ <--- │ JSON responses │ <--- │ • JD matcher           │
+└───────────────┘      └────────────────┘      │ • ATS checker          │
+                                               │ • Power verbs          │
+                                               │ • Resume insights      │
+                                               │ • Quality scorer       │
+                                               └──────────┬─────────────┘
+                                                          │
+                                                    ┌─────▼──────┐
+                                                    │   MySQL    │
+                                                    │ (history)  │
+                                                    └────────────┘
+```
+
+---
+
+## Quick Start
+
+### 1. Requirements
+- Python **3.8+** (3.11+ recommended)
+- MySQL **5.7+** / MariaDB equivalent
+- `pip`, `virtualenv`
+
+### 2. Installation
+```bash
+git clone https://github.com/<you>/ResumeSense.git
+cd ResumeSense-
+python -m venv venv
+source venv/bin/activate            # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Database
+```sql
+CREATE DATABASE resumesense;
+```
+> Optional: skip this step if the configured MySQL user can create databases—the backend will create it on first run.
+
+### 4. Configuration
+Copy `env.example` → `.env` and fill in secrets (see [section](#env-configuration)).
+
+### 5. Run
+```bash
+python run.py
+```
+Visit `http://localhost:5001` (default host is `0.0.0.0`, port `5001`).
+
+### 6. (Optional) Train ML model
+```bash
+python backend/ml/train_model.py
+```
+Creates `backend/ml/resume_quality_model.pkl`. If skipped, the rule-based scorer stays active.
+
+---
+
+## .env Configuration
+
+```env
+# Flask
+SECRET_KEY=change-me
+
+# Database
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your-password
+MYSQL_DATABASE=resumesense
+
+# Files / Models
+UPLOAD_FOLDER=data/resumes
+ML_MODEL_PATH=backend/ml/resume_quality_model.pkl
+```
+
+Tips:
+- Use dedicated DB users per environment.
+- Point `UPLOAD_FOLDER` to persistent storage if running in containers.
+- Keep `.env` out of version control (`.gitignore` already covers it).
+
+---
+
+## Daily Developer Workflow
+
+1. **Activate venv** – `source venv/bin/activate`
+2. **Run backend** – `python run.py`
+3. **Iterate** – Update backend/frontend files; hot reload is enabled via Flask debug mode.
+4. **Lint/Test** – `python -m pytest backend/tests`
+5. **Commit** – Feature branches only; follow the lightweight Git workflow described in `README`.
+
+Project layout reminder:
+
+```
+backend/
+  api/          Flask blueprints
+  nlp/          PDF parser, JD matcher, ATS checker, power verbs, insights
+  ml/           Feature extractor, scorer, training utilities
+  db/           MySQL helpers
+frontend/
+  templates/    index.html, history.html
+  static/       css/, js/
+data/
+  resumes/, jds/ sample artifacts
+```
+
+---
+
+## Feature Deep Dive
+
+| Module | Highlights |
+|--------|------------|
+| **PDF Parser** | Normalizes bullets, strips headers, preserves sentence boundaries for downstream analyzers. |
+| **JD Matcher** | Weighted overlap (70% scientific/technical terms, 30% general keywords), richer stop-word list to ignore hiring fluff, detailed matched vs missing keywords list. |
+| **ATS Checker** | Heading-aware section detection, regex-based contact validation, table/header heuristics, and recommendation engine tuned for real ATS behavior. |
+| **Power Verb Suggester** | Detects weak verbs in context, returns replacements plus stats block (strong vs weak counts, “power verb” score). |
+| **Resume Insights (Projects & Achievements)** | Section-aware parser pinpoints technical projects, infers tech stack, and separates co-curricular achievements with impact verbs. Surfaces in a tabbed UI. |
+| **Quality Scorer** | 22 handcrafted features → Random Forest (or deterministic fallback) producing 0‑100 quality score with feature breakdown. |
+| **History** | Every analysis (resume text, JD, scores) persists for GET `/api/history`, `/api/analysis/<id>`, or frontend browsing. |
+
+---
+
+## REST API Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/analyze` | `POST` (multipart/form-data) | Analyze uploaded PDF or raw text with optional job description. Returns scores, ATS report, power verbs, insights, and database IDs. |
+| `/api/history?limit=20` | `GET` | Paginated list of past analyses with previews. |
+| `/api/analysis/<id>` | `GET` | Full payload for a specific analysis record. |
+| `/api/resume/<id>` | `GET` | Raw resume text + timestamps. |
+
+Typical `POST /api/analyze` response (trimmed):
+
+```json
+{
+  "match_score": 82.7,
+  "match_details": {
+    "common_keywords": ["python","kubernetes","ci/cd"],
+    "missing_keywords": ["terraform","graphql"],
+    "matched_important_keywords": ["Machine Learning", "AWS Lambda"],
+    "important_keywords_matched": 6,
+    "important_keywords_total": 10
+  },
+  "ats_score": 91.2,
+  "ats_report": {
+    "issues": [],
+    "recommendations": ["Use bullet points to improve readability"],
+    "section_checks": { "education": true, "experience": true, ... },
+    "contact_check": { "has_email": true, "has_phone": true, "complete": true },
+    "formatting_checks": { "has_tables": false, ... }
+  },
+  "power_verbs": {...},
+  "resume_insights": {
+    "projects": [{ "title": "...", "tech_stack": ["Python","React"] }],
+    "achievements": [...]
+  },
+  "quality_score": 88.4,
+  "analysis_id": 42
+}
+```
+
+---
+
+## Frontend Experience
+
+- **Analyze tab** – Upload resume + optional JD, watch cards animate for Quality, ATS, and Match scores.
+- **ATS panel** – Issues and recommendations rendered as alert chips for fast scanning.
+- **Power Verbs panel** – Highlights weak verbs inline with suggested replacements.
+- **Match panel** – “Matched / Missing / Important” keyword pills.
+- **Projects & Achievements tabs** – Newly added tabbed panel surfaces extracted technical projects (with inferred tech stack badges) and co-curricular achievements.
+- **History tab** – Chronological list of previous analyses with quick score snapshots.
+
+No frontend frameworks are required; everything is vanilla HTML/CSS/JS, making it easy to embed or restyle.
+
+---
+
+## Testing & Quality
+
+```bash
+python -m pytest backend/tests
+```
+
+Test suites cover:
+- PDF parsing edge cases (`test_pdf_parser.py`)
+- JD matcher scoring (`test_jd_matcher.py`)
+- ATS compliance heuristics (`test_ats_checker.py`)
+- Power verb suggestions (`test_power_verbs.py`)
+
+Add new tests alongside new NLP/ML helpers to keep regression coverage high.
+
+---
+
+## Troubleshooting Playbook
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| `'cryptography' package is required` | PyMySQL + caching_sha2 auth | `pip install cryptography` inside the venv. |
+| `Unknown database 'resumesense'` | DB not created yet | Ensure MySQL user can create DB or run `CREATE DATABASE resumesense;`. |
+| PyMuPDF build fails on Windows | Visual Studio Build Tools missing | Install “Desktop Development with C++” workload or use Python 3.12 where wheels exist. |
+| Resume text empty | PDF is scanned images | Convert to selectable text or use OCR before uploading. |
+| ATS report flags missing sections incorrectly | Resume uses uncommon headings | Rename headings to standard ones (“Experience”, “Skills”, etc.) or enhance `_looks_like_heading`. |
+| Frontend stops responding | Flask crashed | Check terminal logs; most errors propagate with stack traces. |
+
+---
+
+## Deployment Notes
+
+- **Procfile (Heroku / Render)**: `web: gunicorn run:app`
+- **Gunicorn command**: `gunicorn run:app --bind 0.0.0.0:$PORT`
+- **Environment**: set `FLASK_ENV=production`, unique `SECRET_KEY`, and production DB credentials.
+- **Static files**: served by Flask; for CDNs, point to `frontend/static`.
+- **Uploads**: ensure `UPLOAD_FOLDER` is writable (mount persistent volume or S3 adapter).
+
+---
+
+## Roadmap & Contributions
+
+- [ ] DOCX ingestion & OCR fallback
+- [ ] Transformer-based semantic matcher
+- [ ] Exportable PDF/HTML reports
+- [ ] Multi-user workspace & sharing
+- [ ] Job board integrations
+
+Contributions are welcome!  
+1. Fork → Branch → PR  
+2. Write/extend tests  
+3. Document any configuration changes
+
+---
+
+Built with ❤️ for job seekers, recruiters, and career coaches who want feedback they can trust. Happy analyzing!
 
 
