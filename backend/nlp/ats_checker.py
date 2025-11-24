@@ -28,7 +28,7 @@ class ATSChecker:
         text_lower = resume_text.lower()
         
         # Check for required sections
-        section_checks = ATSChecker._check_sections(text_lower)
+        section_checks = ATSChecker._check_sections(resume_text, text_lower)
         
         # Check for contact information
         contact_check = ATSChecker._check_contact_info(resume_text)
@@ -51,37 +51,46 @@ class ATSChecker:
         }
     
     @staticmethod
-    def _check_sections(text: str) -> Dict[str, bool]:
+    def _check_sections(raw_text: str, text_lower: str) -> Dict[str, bool]:
         """
         Check if required sections are present.
         
         Args:
-            text: Lowercase resume text
+            raw_text: Original resume text (with line structure)
+            text_lower: Lowercase resume text
             
         Returns:
             Dictionary mapping section names to presence boolean
         """
         sections = {}
+        headings = ATSChecker._find_headings(raw_text)
+
+        def _has_section(keywords):
+            keyword_patterns = [re.compile(rf'\b{kw}\b', re.IGNORECASE) for kw in keywords]
+            for heading in headings:
+                if any(pattern.search(heading) for pattern in keyword_patterns):
+                    return True
+            return any(pattern.search(text_lower) for pattern in keyword_patterns)
         
         # Check for education section
         education_keywords = ['education', 'academic', 'degree', 'university', 'college', 'school']
-        sections['education'] = any(kw in text for kw in education_keywords)
+        sections['education'] = _has_section(education_keywords)
         
         # Check for experience section
-        experience_keywords = ['experience', 'employment', 'work history', 'professional', 'career']
-        sections['experience'] = any(kw in text for kw in experience_keywords)
+        experience_keywords = ['experience', 'employment', 'work history', 'professional experience', 'career']
+        sections['experience'] = _has_section(experience_keywords)
         
         # Check for skills section
-        skills_keywords = ['skills', 'technical skills', 'competencies', 'proficiencies']
-        sections['skills'] = any(kw in text for kw in skills_keywords)
+        skills_keywords = ['skills', 'technical skills', 'competencies', 'proficiencies', 'tech stack']
+        sections['skills'] = _has_section(skills_keywords)
         
         # Check for contact section
-        contact_keywords = ['email', 'phone', 'address', 'contact']
-        sections['contact'] = any(kw in text for kw in contact_keywords)
+        contact_keywords = ['contact', 'contact information', 'contact details']
+        sections['contact'] = _has_section(contact_keywords) or ATSChecker._check_contact_info(raw_text)['complete']
         
         # Check for summary/objective
-        summary_keywords = ['summary', 'objective', 'profile', 'about']
-        sections['summary'] = any(kw in text for kw in summary_keywords)
+        summary_keywords = ['summary', 'objective', 'profile', 'about', 'overview']
+        sections['summary'] = _has_section(summary_keywords)
         
         return sections
     
@@ -97,7 +106,7 @@ class ATSChecker:
             Dictionary with contact info checks
         """
         # Check for email
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
         has_email = bool(re.search(email_pattern, text))
         
         # Check for phone number
@@ -108,9 +117,10 @@ class ATSChecker:
         ]
         has_phone = any(re.search(pattern, text) for pattern in phone_patterns)
         
-        # Check for address (basic check)
-        address_keywords = ['street', 'avenue', 'road', 'drive', 'lane', 'city', 'state', 'zip']
-        has_address = any(kw.lower() in text.lower() for kw in address_keywords)
+        # Check for address patterns (number + street)
+        address_pattern = r'\b\d{1,5}\s+[A-Za-z0-9]+\s+(Street|St|Avenue|Ave|Road|Rd|Lane|Ln|Drive|Dr|Boulevard|Blvd)\b'
+        city_state_pattern = r'\b[A-Za-z]+\s*,\s*[A-Za-z]{2}\b'
+        has_address = bool(re.search(address_pattern, text, re.IGNORECASE) or re.search(city_state_pattern, text))
         
         return {
             'has_email': has_email,
@@ -131,25 +141,24 @@ class ATSChecker:
             Dictionary with formatting checks
         """
         # Check for table-like structures (multiple spaces or tabs in a row)
-        table_pattern = r' {3,}|\t'
-        has_tables = bool(re.search(table_pattern, text))
+        lines = text.split('\n')
+        multi_space_lines = sum(1 for line in lines if re.search(r' {4,}', line))
+        has_tabs = '\t' in text
+        has_pipes = sum(1 for line in lines if '|' in line) >= 3
+        has_tables = has_tabs or has_pipes or multi_space_lines >= 4
         
         # Check for excessive special characters (might indicate images or complex formatting)
         special_char_ratio = len(re.findall(r'[^\w\s]', text)) / max(len(text), 1)
         excessive_formatting = special_char_ratio > 0.3
         
         # Check for headers/footers (repeated text)
-        lines = text.split('\n')
+        has_headers_footers = False
         if len(lines) > 10:
-            # Check if first/last few lines repeat (common in headers/footers)
-            header_lines = lines[:3]
-            footer_lines = lines[-3:]
-            has_headers_footers = any(
-                line.strip() in footer_lines or line.strip() in header_lines
-                for line in header_lines
-            )
-        else:
-            has_headers_footers = False
+            header_signature = " ".join(line.strip() for line in lines[:3])
+            footer_signature = " ".join(line.strip() for line in lines[-3:])
+            repeated_header = header_signature and text.count(header_signature) > 1
+            repeated_footer = footer_signature and text.count(footer_signature) > 1
+            has_headers_footers = repeated_header or repeated_footer
         
         # Check for bullet points (good for ATS)
         has_bullets = bool(re.search(r'[•\-\*]\s', text))
@@ -230,7 +239,7 @@ class ATSChecker:
         if not contact_check['has_email']:
             issues.append("Missing email address")
         if not contact_check['has_phone']:
-            issues.append("Missing phone number")
+            issues.append("Missing phone number or phone format not detected")
         
         # Formatting issues
         if formatting_checks['has_tables']:
@@ -275,7 +284,7 @@ class ATSChecker:
         
         # Formatting recommendations
         if formatting_checks['has_tables']:
-            recommendations.append("Avoid using tables; use simple text formatting instead")
+            recommendations.append("Avoid using tables or multi-column layouts; use simple text formatting instead")
         if not formatting_checks['has_bullets']:
             recommendations.append("Use bullet points to improve readability and ATS parsing")
         
@@ -284,5 +293,26 @@ class ATSChecker:
         recommendations.append("Use keywords from the job description naturally throughout your resume")
         
         return recommendations
+
+    @staticmethod
+    def _find_headings(text: str) -> List[str]:
+        headings = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if ATSChecker._looks_like_heading(stripped):
+                headings.append(stripped)
+        return headings
+
+    @staticmethod
+    def _looks_like_heading(line: str) -> bool:
+        if len(line.split()) > 8:
+            return False
+        if line.endswith(':'):
+            return True
+        if line.isupper() and len(line) >= 3:
+            return True
+        return bool(re.match(r'^[A-Za-z0-9 &/+-]+$', line)) and line == line.title()
 
 
