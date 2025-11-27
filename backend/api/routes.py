@@ -9,6 +9,7 @@ from backend.nlp.pdf_parser import PDFParser
 from backend.nlp.jd_matcher import JDMatcher
 from backend.nlp.ats_checker import ATSChecker
 from backend.nlp.power_verbs import PowerVerbSuggester
+from backend.nlp.resume_insights import ResumeInsights
 from backend.ml.resume_scorer import ResumeScorer
 from backend.db.database import Database
 from backend.config import Config
@@ -113,6 +114,9 @@ def analyze_resume():
             'model_used': quality_result['model_used'],
             'features': quality_result['features']
         }
+
+        # Resume insights (projects & achievements)
+        results['resume_insights'] = ResumeInsights.extract_insights(resume_text)
         
         # Store in database
         try:
@@ -261,5 +265,4 @@ def get_analysis(analysis_id):
         return jsonify({
             'error': f'An error occurred retrieving analysis: {str(e)}'
         }), 500
-
 
